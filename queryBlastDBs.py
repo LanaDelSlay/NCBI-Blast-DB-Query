@@ -1,12 +1,9 @@
-import datetime
 from ftplib import FTP
-import dateutil.parser as dparser
 import re
 
 ftp = FTP('ftp.ncbi.nlm.nih.gov')
 ftp.login()
 ftp.cwd('blast/db')
-
 
 def giveSize(size):
     if size > 1024:
@@ -32,10 +29,8 @@ def listLineCallback(line):
         return # Ignores md5 files
     if line.startswith('dr-xr-xr-x'):
         return # Ignore the other weird files
-    msg = line;
-    msg = msg.removeprefix('-r--r--r--   1 ftp      anonymous').removesuffix('.tar.gz').strip()
-    res = list(map(int, re.findall(r'\d+', msg))) # Get all numbers in str, we only need the first one.
-    fileSizeBytes = res[0]
+    msg = line.removeprefix('-r--r--r--   1 ftp      anonymous').removesuffix('.tar.gz').strip();
+    fileSizeBytes = list(map(int, re.findall(r'\d+', msg)))[0] # Get all numbers in str, we only need the first one.
     sizeStr = giveSize(fileSizeBytes)
     restOfStr = msg[len(str(fileSizeBytes)): len(msg)].replace("  ", " ") ## Odd formatting from ftp with random double space
     date = re.search(r'\w{3} \d+ ?\d{2}?:?\d+', restOfStr).group()
