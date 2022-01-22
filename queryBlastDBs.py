@@ -144,6 +144,7 @@ if sortByDate:
 
 if len(arguments) == 1:
     print("Run this with these commands to sort and display the DBs.")
+    print("")
     print("--show_each_db_segment  This will show each file making up a DB and it's relevant info")
     print("--sort_size  This will sort each database by it's total size")
     print("--sort_date This will sort by most recent update and print them out")
