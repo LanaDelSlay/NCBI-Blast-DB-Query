@@ -6,9 +6,9 @@ from datetime import datetime
 
 arguments = (sys.argv)
 
-## Show each individual file
-## Sort by total size
-## Sort by most recently updated DBs
+## Show each individual file --show_each_db_segment
+## Sort by total size --sort_size
+## Sort by most recently updated DBs --sort_date
 showEachFile = False
 sortBySize = False
 sortByDate = False
@@ -112,28 +112,39 @@ def biggestSize(database):
     return database.sizeInBytes
 
 for argument in arguments:
-
+    argument = argument.replace("--", "")
     if argument == "show_each_db_segment":
-        showEachFile == True
+        showEachFile = True
     elif argument == "sort_size":
         sortBySize = True
-        break
     elif argument == "sort_date":
-        sortByDate == True
-
+        sortByDate = True
 
 ftp.retrlines('LIST', lambda block: listLineCallback(block, showEachFile))
 totalList = getListTotal(eachDatabasePiece)
 if sortBySize:
+ print()
+ print("-" * 20)
  print("SIZE SORT")
  print("-"*20)
- totalList.sort(key=biggestSize)
+ totalList.sort(key=biggestSize, reverse=True)
  for items in totalList:
      print(items.toString())
+ print()
 
 if sortByDate:
+    print()
+    print("-" * 20)
     print("DATE SORT")
     print("-" * 20)
     totalList.sort(key=latestUpdate,reverse=True)
     for items in totalList:
         print(items.toString())
+    print()
+
+if len(arguments) == 1:
+    print("Run this with these commands to sort and display the DBs.")
+    print("--show_each_db_segment  This will show each file making up a DB and it's relevant info")
+    print("--sort_size  This will sort each database by it's total size")
+    print("--sort_date This will sort by most recent update and print them out")
+    print("Example usage: python3 queryBlastDBs.py --show_each_db_segment --sort_size")
