@@ -1,7 +1,17 @@
 from ftplib import FTP
 import re
 import blastDatabase
+import sys
 from datetime import datetime
+
+arguments = (sys.argv)
+
+## Show each individual file
+## Sort by total size
+## Sort by most recently updated DBs
+showEachFile = False
+sortBySize = False
+sortByDate = False
 
 dataSizes = {'Bytes', 'KBs', 'MBs', 'GBs'}
 ftp = FTP('ftp.ncbi.nlm.nih.gov')
@@ -39,8 +49,7 @@ def getTotalSize(list, name):
         iteration = iteration + 1
     return totalSize
 
-def listLineCallback(line):
-    printEachItem = False
+def listLineCallback(line, printEachItem = False):
     if line.endswith('.md5') or line.endswith('.json') or line.endswith('README'):
         return # Ignores md5 files
     if line.startswith('dr-xr-xr-x'):
@@ -102,11 +111,29 @@ def latestUpdate(database):
 def biggestSize(database):
     return database.sizeInBytes
 
-ftp.retrlines('LIST', listLineCallback)
+for argument in arguments:
+
+    if argument == "show_each_db_segment":
+        showEachFile == True
+    elif argument == "sort_size":
+        sortBySize = True
+        break
+    elif argument == "sort_date":
+        sortByDate == True
+
+
+ftp.retrlines('LIST', lambda block: listLineCallback(block, showEachFile))
 totalList = getListTotal(eachDatabasePiece)
-#totalList.sort(key=biggestSize)
-totalList.sort(key=latestUpdate,reverse=True)
-print()
-print()
-for items in totalList:
-    print(items.toString())
+if sortBySize:
+ print("SIZE SORT")
+ print("-"*20)
+ totalList.sort(key=biggestSize)
+ for items in totalList:
+     print(items.toString())
+
+if sortByDate:
+    print("DATE SORT")
+    print("-" * 20)
+    totalList.sort(key=latestUpdate,reverse=True)
+    for items in totalList:
+        print(items.toString())
