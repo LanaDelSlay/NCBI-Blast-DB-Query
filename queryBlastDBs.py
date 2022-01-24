@@ -1,23 +1,54 @@
-from ftplib import FTP
-import re
-import blastDatabase
-import sys
+import urllib.request as request
+from contextlib import closing
 from datetime import datetime
+from ftplib import FTP
+import blastDatabase
+import shutil
+import sys
+import re
+import os
 
 arguments = (sys.argv)
 
 ## Show each individual file --show_each_db_segment
+## Show each usable DB hosted by NCBI --show_db
 ## Sort by total size --sort_size
 ## Sort by most recently updated DBs --sort_date
+## Download DBs by running --dl_db human_genome | For a full list of downloadable DB do --show_db
+
 showEachFile = False
+showDBNames = False
 sortBySize = False
 sortByDate = False
 
-dataSizes = {'Bytes', 'KBs', 'MBs', 'GBs'}
 ftp = FTP('ftp.ncbi.nlm.nih.gov')
 ftp.login()
 ftp.cwd('blast/db')
 eachDatabasePiece = [] #
+
+def countSegments(list, databaseName):
+    count = 0
+    for item in list:
+        if item.name.startswith(databaseName):
+            count = count + 1
+    return count
+
+def downloadDataBase(databaseName):
+    ## Need to do a free size check and make sure there's enough space.
+    segmentsOfDB = countSegments(eachDatabasePiece, databaseName)
+    path = databaseName + "_files"
+    os.makedirs(path, exist_ok=True)
+    if segmentsOfDB <= 1:
+        file = open(path + os.path.sep + databaseName, 'wb')
+        ftp.retrbinary("RETR " + databaseName, file.write)
+    else:
+        for i in range(segmentsOfDB):
+            dataBaseSeg = databaseName + "." + "{:02d}".format(i) + ".tar.gz"
+            local_filename = os.path.join(path + os.path.sep, dataBaseSeg)
+            file = open(local_filename, 'wb')
+            print('Downloading ' + dataBaseSeg)
+            ftp.retrbinary('RETR ' + dataBaseSeg, file.write)
+    ftp.quit()
 
 def getSizeInUnits(size):
     if size > 1024:
@@ -112,16 +143,24 @@ def biggestSize(database):
     return database.sizeInBytes
 
 for argument in arguments:
+    argumentCount = 1
     argument = argument.replace("--", "")
+    argument = argument.lower()
     if argument == "show_each_db_segment":
         showEachFile = True
     elif argument == "sort_size":
         sortBySize = True
     elif argument == "sort_date":
         sortByDate = True
+    elif argument == "show_db" or argument == "show_dbs":
+        showDBNames = True
+    elif argument == "dl_db":
+        downloadDataBase(arguments[argumentCount + 1])
+    argumentCount = argumentCount + 1
 
 ftp.retrlines('LIST', lambda block: listLineCallback(block, showEachFile))
 totalList = getListTotal(eachDatabasePiece)
+
 if sortBySize:
  print()
  print("-" * 20)
@@ -142,10 +181,22 @@ if sortByDate:
         print(items.toString())
     print()
 
-if len(arguments) == 1:
+if showDBNames:
+    print()
+    print("-" * 20)
+    print("DATABASES")
+    print("-" * 20)
+    names = getUniqueNames(totalList)
+    for name in names:
+        print(name)
+
+if len(arguments) <= 1:
     print("Run this with these commands to sort and display the DBs.")
     print("")
     print("--show_each_db_segment  This will show each file making up a DB and it's relevant info")
     print("--sort_size  This will sort each database by it's total size")
     print("--sort_date This will sort by most recent update and print them out")
+    print("--show_db This will show all available DBs for BLAST hosted by NCBI")
     print("Example usage: python3 queryBlastDBs.py --show_each_db_segment --sort_size")
+    downloadDataBase("human_genome")
+
