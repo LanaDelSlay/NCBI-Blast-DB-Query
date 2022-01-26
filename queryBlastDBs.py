@@ -20,8 +20,8 @@ def count_segments(segment_list, database_name):
             count = count + 1
     return count
 
-def dl_database(database_name):
-    if is_valid_db(list, database_name):
+def dl_database(database_name, collapsed_list):
+    if is_valid_db(collapsed_list, database_name):
         base_URL = "ftp://ftp.ncbi.nlm.nih.gov/blast/db/"
         segments_of_db = count_segments(each_database_piece, database_name)
         path = database_name + "_files"
@@ -35,10 +35,14 @@ def dl_database(database_name):
                 path = database_name + "_files"
                 url = base_URL + database_name + "." + "{:02d}".format(i) + ".tar.gz"
                 sys.stdout.flush()
-                print('DLing: {}.{:02d} [Segment {} of {}]'.format(database_name, i, i + 1, segments_of_db))
+                print('Down Loading: {}.{:02d} [Segment {} of {}]'.format(database_name, i, i + 1, segments_of_db))
                 wget.download(url, path, bar=bar_progress)
+                print()
 
 def is_valid_db(collapsed_list, database_name):
+    if type(collapsed_list) is str:
+        print('String passed instead of list, pass list then name')
+        return
     for item in collapsed_list:
         if(item.name == database_name):
             return True
@@ -50,11 +54,15 @@ def find_closest_match(collapsed_list, database_name):
     for item in collapsed_list:
         name_list.append(item.name)
     matches = difflib.get_close_matches(database_name, name_list)
+    print('Cant find "{}"'.format(database_name))
     print('Did you mean: ')
-    print('\n'.join('{}: {}'.format(*k) for k in enumerate(matches)))
+    print('\n'.join('{} - {}'.format(*k) for k in enumerate(matches)))
 
 def bar_progress(current, total, width=80):
-    progress_message = "Downloading: %d%% [%d / %d] bytes" % (current / total * 100, current, total)
+    fill_level_percent = current / total * 100
+    fill_bars = fill_level_percent / 4 # Bar is 25 long so we'll divide by 4
+    progress_message = "[-------------------------]" + " Downloading: [%d / %d] Bytes  %d%% " % (current, total, current / total * 100)
+    progress_message = progress_message.replace("-", "█", int(fill_bars))
     # Don't use print() as it will print in new line every time.
     sys.stdout.write("\r" + progress_message)
     sys.stdout.flush()
@@ -162,10 +170,11 @@ arguments = sys.argv
 ftp = FTP('ftp.ncbi.nlm.nih.gov')
 ftp.login()
 ftp.cwd('blast/db')
-each_database_piece = []
+each_database_piece = [] # Each Individual Segment
+ftp.retrlines('LIST', lambda block: list_line_callback(block, show_each_file))
+total_list = get_list_total(each_database_piece) # Collapsed List
 
 for argument in arguments:
-
     argument_count = 1
     argument = argument.replace("--", "")
     argument = argument.lower()
@@ -178,11 +187,8 @@ for argument in arguments:
     elif argument == "show_db" or argument == "show_dbs":
         show_db_names = True
     elif argument == "dl_db":
-        dl_database(arguments[argument_count + 1])
+        dl_database(arguments[argument_count + 1], total_list)
     argument_count = argument_count + 1
-
-ftp.retrlines('LIST', lambda block: list_line_callback(block, show_each_file))
-total_list = get_list_total(each_database_piece)
 
 if sort_by_size:
     print()
