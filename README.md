@@ -14,3 +14,8 @@ Little tool for monitoring updates and sizes and downloading BLAST DBs from NCBI
 
 
 ![Example Usage](ncbiDBexample.gif)
+
+
+### TODO:
+Add MD5 verification and redownload corrupt files. 
+Unzip DB and put into one folder.
